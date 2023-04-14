@@ -2,6 +2,10 @@ import numpy as np
 import nltk
 import string 
 import random
+from gensim.models import Word2Vec
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+
 f=open('./data.txt','r',errors='ignore')
 
 raw_file=f.read()
@@ -14,6 +18,7 @@ nltk.download('punkt')
 ##downloading wordnet dict
 nltk.download('wordnet')
 nltk.download('omw-1.4')
+nltk.download('stopwords')
 
 sentence_tokens=nltk.sent_tokenize(raw_file)
 word_tokens=nltk.word_tokenize(raw_file)
@@ -27,6 +32,11 @@ remove_punc_dict=dict((ord(punct),None) for punct in string.punctuation)
 def lem_Normalize(text):
     return lem_tokens(nltk.word_tokenize(text.lower().translate(remove_punc_dict)))
 
+preprocessed_corpus = [lem_Normalize(sentence) for sentence in sentence_tokens]
+model = Word2Vec(preprocessed_corpus, window=5, min_count=5, workers=4)
+
+# Save the trained model to disk
+model.save("word2vec.model")
 ##define greeting inputs
 greet_inputs=('hello','hi','hey','htbot','how are you')
 greet_responses=('Heyy','Hello','Hi There!','How can i help you')
@@ -40,21 +50,31 @@ import sklearn
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-def response(user_msg):
-    bot_response=''
-    TfidVec=TfidfVectorizer(tokenizer= None,stop_words='english')
-    tfidf=TfidVec.fit_transform(sentence_tokens)
-    vals=cosine_similarity(tfidf[-1],tfidf)
-    idx=vals.argsort()[0][-2]
-    flat=vals.flatten()
-    flat.sort()
-    req_tfidf=flat[-2]
-    # print(req_tfidf)
-    if(req_tfidf==0):
-        bot_response=bot_response+'I am sorry , unable to understand you'
-    else:
-        bot_response=bot_response+sentence_tokens[idx]
-    return bot_response
+def preprocess_input(input_text):
+    # convert to lowercase
+    input_text = input_text.lower()
+    # remove punctuation
+    input_text = input_text.translate(str.maketrans("", "", string.punctuation))
+    # tokenize input text
+    tokens = word_tokenize(input_text)
+    # remove stop words
+    tokens = [token for token in tokens if token not in stopwords.words('english')]
+    return tokens
+
+# define function to generate response
+def generate_response(input_text):
+    # preprocess input text
+    input_tokens = preprocess_input(input_text)
+    # calculate WMD distance between input and each sentence in the corpus
+    wmd_distances = []
+    for sentence in sentence_tokens:
+        s_t = preprocess_input(sentence)
+        distance = model.wv.wmdistance(input_tokens, s_t)
+        wmd_distances.append(distance)
+    # find index of closest sentence
+    closest_idx = np.argmin(wmd_distances)
+    # return corresponding sentence
+    return sentence_tokens[closest_idx]
 
 talking=True
 print("HT : Hello i am HT ")
@@ -72,7 +92,7 @@ while(talking):
             else:
                 sentence_tokens.append(user_response)
                 print("HT :",end='')
-                bot_response=response(user_response)
+                bot_response=generate_response(user_response)
                 if(bot_response == 'I am sorry , unable to understand you'):
                     print(bot_response)
                     new_ans = input(" Can you suggest an answer for this? : ")

@@ -26,13 +26,14 @@ remove_punc_dict = dict((ord(punct), None) for punct in string.punctuation)
 def lem_Normalize(text):
     return lem_tokens(nltk.word_tokenize(text.lower().translate(remove_punc_dict)))
 
-greet_inputs = ('hello', 'hi', 'hey', 'htbot', 'how are you')
-greet_responses = ('Heyy', 'Hello', 'Hi There!', 'How can i help you')
 
 def greet(sentence):
+    greet_inputs = ('hello', 'hi', 'hey', 'htbot', 'how are you')
+    greet_responses = ('Heyy', 'Hello', 'Hi There!', 'How can i help you')
     for word in sentence.split():
         if word.lower() in greet_inputs:
             return random.choice(greet_responses)
+
 
 import sklearn
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -63,8 +64,8 @@ def bot(user_response):
                 return greet(user_response)
             else:
                 sentence_tokens.append(user_response)
-                word_tokens=word_tokens+nltk.word_tokenize(user_response)
-                final_words=list(set(word_tokens))
+                # word_tokens=word_tokens+nltk.word_tokenize(user_response)
+                # final_words=list(set(word_tokens))
                 res=response(user_response)
                 sentence_tokens.remove(user_response)
                 return res
